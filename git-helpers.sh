@@ -289,7 +289,7 @@ _git_verify_revert() {
     git revert --abort > /dev/null 2>&1
     
     if [ ${_rc} -ne 0 ]; then
-	_msg_error "Failed to revert '${_tag}' [SHA1: ${_sha1_id}]"
+	_msg_error "Failed to revert '${_tag}' [SHA1: ${_sha1_id}]" 0
 	
 	if _yesno_prompt "Display the output of the revert command?" 0 ; then
 	    ${PAGER} <<<"${_cmd_out}"
