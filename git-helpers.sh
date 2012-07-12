@@ -540,7 +540,7 @@ exec_apply() {
     _git_push_branch ${_branch}
 
     # pull on the Cfengine servers
-    exec_pull
+    exec_pull -b "${_branch}"
 
     _git_checkout_branch ${_prev_branch}
     _msg_info "Done."
@@ -720,7 +720,7 @@ exec_revert() {
 	
 	# should we pull on the Cfengine servers?
 	if [ ${_pull} -eq 1 ]; then
-	    exec_pull
+	    exec_pull -b "${_branch}"
 	fi
 
 	_msg_info "Done."
@@ -865,24 +865,57 @@ exec_sync() {
 # return: EX_USAGE
 usage_pull() {
     
-    echo "usage: git change pull"
+    echo "usage: git change pull -b <branch>"
     echo ""
     echo "Performs a pull operation on the Cfengine servers"
     echo ""
     echo "This command will perform a 'git pull' on the Cfengine servers"
+    echo "Valid branch names to specify for the pull operation are listed below:"
     echo ""
-    echo "Example usage: git change pull"
+    echo " * TEST      [cfengine-test.elex.be]"
+    echo " * UAT       [cfengine-uat.elex.be]"
+    echo " * STABLE    [cfengine.elex.be]"
+    echo " * ALL       [Pull on all Cfengine servers]"
+    echo ""
+    echo "Example usage: git change pull -b STABLE"
     
     exit 64 # EX_USAGE
 }
 
 # Pull changes on the Cfengine servers
+# $1: Branch name
 exec_pull() {
-    local _cfengine_servers="cfengine-test.elex.be cfengine-uat.elex.be cfengine.elex.be"
+    local _branch
+    local _cfengine_servers
     local _server
 
+    # Parse command-line options
+    while getopts 'b:' arg; do
+	case "${arg}" in
+	    b) _branch="${OPTARG}" ;;
+            ?) usage_pull ;;
+	esac
+    done
+
+    shift $((OPTIND - 1))
+
+    # Pull only on the Cfengine server we apply the change
+    case "${_branch}" in
+	TEST)	_cfengine_servers="cfengine-test.elex.be" ;;
+	UAT) 	_cfengine_servers="cfengine-uat.elex.be" ;;
+	STABLE)	_cfengine_servers="cfengine.elex.be" ;;
+	ALL)	_cfengine_servers="cfengine-test.elex.be cfengine-uat.elex.be cfengine.elex.be" ;;
+	*)	_cfengine_servers="" ;;
+    esac
+	    	
     if [ $# -ne 0 ]; then
 	usage_pull
+    fi
+
+    if [[ -z "${_cfengine_servers}" ]]; then
+	_msg_info "No valid branch names specified for pull"
+	_msg_info "Not doing a remote pull on the Cfengine servers"
+	return
     fi
 
     for _server in ${_cfengine_servers}; do 
