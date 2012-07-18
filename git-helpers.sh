@@ -889,6 +889,9 @@ exec_pull() {
     local _cfengine_servers
     local _server
 
+    # reset getopts
+    OPTIND=1
+
     # Parse command-line options
     while getopts 'b:' arg; do
 	case "${arg}" in
