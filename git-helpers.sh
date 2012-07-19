@@ -599,6 +599,11 @@ exec_squash() {
 	_msg_error "The specified branch '${_branch}' does not exists" 65 # EX_DATAERR
     fi
 
+    # push local changes to the remote branch before creating the patch?
+    if _yesno_prompt "Push local branch '${_prev_branch}' before creating the patch?" 0 ; then
+	_git_push_branch "${_prev_branch}"
+    fi
+
     # verify if squash merge is possible
     if ! _git_verify_merge ${_branch} 1 ; then
 	_msg_error "Merge verification failed, cannot proceed" 65 # EX_DATAERR
@@ -1048,5 +1053,5 @@ exec_git_change() {
     exit 0 # EX_OK
 }
 
-git config --global alias.change '! f() { eval bash -ic \"{ exec_git_change $* \; }\" ; } ; f'
+git config --global alias.change '! f() { eval bash -ic \"{exec_git_change $* \; }\" ; } ; f'
 
