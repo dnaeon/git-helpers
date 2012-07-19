@@ -1053,5 +1053,4 @@ exec_git_change() {
     exit 0 # EX_OK
 }
 
-git config --global alias.change '! f() { eval bash -ic \"{exec_git_change $* \; }\" ; } ; f'
-
+git config --global alias.change '! f() { eval bash -ic \"{ exec_git_change $* \; }\" ; } ; f'
