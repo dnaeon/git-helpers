@@ -625,6 +625,7 @@ exec_squash() {
 	_commit_msg=$( git log -1 --pretty=%s )
 	_patch_saved=$( tr ' ' '-' <<<"${_commit_msg}" )
 	_patch_saved=$( tr -d ':' <<<"${_patch_saved}" )
+	_patch_saved=$( tr -d '/' <<<"${_patch_saved}" )
 	git format-patch --quiet --stdout ${_branch} > "/tmp/${_patch_saved}.patch"
 	
 	_msg_info "Patch file saved in /tmp/${_patch_saved}.patch"
