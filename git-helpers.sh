@@ -195,8 +195,10 @@ _sanity_check() {
 
 # Source the Git helpers configuration file
 _source_config() { 
-
-    source "${HOME}/.git-helpers.conf"
+    
+    if [[ -f "${HOME}/.git-helpers.conf" ]]; then
+	source "${HOME}/.git-helpers.conf"
+    fi
 }
 
 # Check if working tree is clean
