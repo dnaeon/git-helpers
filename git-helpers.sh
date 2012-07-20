@@ -937,52 +937,93 @@ exec_pull() {
 # return: EX_USAGE
 usage_init() {
     
-    echo "usage: git change init"
+    echo "usage: git change init [-f]"
     echo ""
     echo "Performs initial setup of the helpers"
     echo ""
     echo "Initial setup of the helpers consists of creating a home"
     echo "folder for you and copying your public SSH keys to the"
-    echo "master Cfengine servers"
+    echo "specified remote servers for pulling"
+    echo ""
+    echo "If '-f' flag is specified then the helpers configuration will be re-created"
     echo ""
     echo "Example usage: git change init"
+    echo "               git change init -f"
     
     exit 64 # EX_USAGE
 }
 
 # Performs initial configuration of the helpers
 exec_init() {
-    local _cfengine_servers="cfengine-test.elex.be cfengine-uat.elex.be cfengine.elex.be"
+    local _remote_servers
     local _server
     local _username
     local _ssh_key
+    local _force=0
+
+    # reset getopts
+    OPTIND=1
+
+    # Parse command-line options
+    while getopts 'f' arg; do
+	case "${arg}" in
+	    f) _force=1 ;;
+            ?) usage_init ;;
+	esac
+    done
 
     if [ $# -ne 0 ]; then
 	usage_init
     fi
 
-    _msg_info "Performing initial setup of the helpers"
+    if [[ -f "~/.git-helpers.conf" ]]; then
+	if [[ ${_force} -eq 0 ]]; then
+	    _msg_error "Configuration file already exists at ~/.git-helpers.conf" 0
+	    _msg_error "Please edit ~/.git-helpers.conf file or use the '-f' flag to re-create the configuration" 64 # EX_USAGE
+	fi
+    fi
+
+    _msg_info "Performing initial configuration of the helpers"
     read -p "Username to use [default ${USER}]: " _username
 
     if [[ -z "${_username}" ]]; then
 	_username=${USER}
     fi
 
-    if [[ -e "/home/${_username}/.ssh/id_rsa.pub" ]]; then
-	_ssh_key="/home/${_username}/.ssh/id_rsa.pub"
-    elif [[ -e "/home/${_username}/.ssh/id_dsa.pub" ]]; then
-	_ssh_key="/home/${_username}/.ssh/id_dsa.pub"
+    if [[ -e "~/.ssh/id_rsa.pub" ]]; then
+	_ssh_key="~/.ssh/id_rsa.pub"
+    elif [[ -e "~/.ssh/id_dsa.pub" ]]; then
+	_ssh_key="~/.ssh/id_dsa.pub"
     else
 	_msg_info "There were no public SSH keys found in /home/${_username}/.ssh"
 	_msg_info "Executing ssh-keygen(1)"
 	ssh-keygen -t rsa -b 2048
-	_ssh_key="/home/${_username}/.ssh/id_rsa.pub"
+	_ssh_key="~/.ssh/id_rsa.pub"
     fi
 
-    for _server in ${_cfengine_servers}; do 
-	_msg_info "Configuring access to '${_server}'"
+    _msg_info "Will now configure remote repositories for pulling"
+    _msg_info "To stop entering repositories enter EOF (Ctrl+D)"
+
+    while read -p "Server name: " _server ; do
+	_remote_servers="${_remote_servers} ${_server}"
+    done
+   
+    _msg_info "Will now copy your public SSH keys to the remote servers"
+    _msg_info "Make sure that you have a home directory with proper permissions on the servers before proceeding"
+    _yesno_prompt "Press ENTER when ready ..." 2
+     
+    for _server in ${_remote_servers}; do 
+	_msg_info "Copying SSH keys to '${_server}'"
 	ssh-copy-id "${_username}"@"${_server}"
     done
+
+    _msg_info "Saving configuration in ~/.git-helpers.conf"
+
+    echo "GIT_HELPERS_USER={_username}" > ~/.git-helpers.conf
+    echo "GIT_HELPERS_SERVERS=${_remote_servers}" >> ~/.git-helpers.conf
+    chmod 0600 ~/.git-helpers.conf
+    
+    _msg_info "Configuration file saved in ~/.git-helpers.conf"
 }
 
 # Main command 'git change'
