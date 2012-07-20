@@ -124,8 +124,8 @@ _msg_menu() {
     local _counter=1
     local _choice=0
     
-    # append to the menu items the 'ALL' option
-    _menu_items="${_menu_items} ALL"
+    # append to the menu items the 'ALL' and 'NONE' options
+    _menu_items="${_menu_items} ALL NONE"
 
     echo ">>> MENU  : ${_msg}"
     echo ""
@@ -141,7 +141,7 @@ _msg_menu() {
 	_msg_input "Please select an option from the above menu: " _choice
 	
 	# check if a valid choice was made
-	if [[ ( ${_choice} -lt 1 ) || ( ${_choice} -ge ${_counter} ) ]]; then
+	if [[ ( ${_choice} -lt 1 ) || ( ${_choice} -gt ${_counter} ) ]]; then
 	    _choice=0
 	    _msg_error "Invalid input detected" 0
 	fi
@@ -1009,6 +1009,11 @@ exec_pull() {
     if [[ -z "${_remote_server}" ]]; then
 	_msg_info "No server for pulling specified"
 	_msg_menu "Available servers for pulling" "${GIT_HELPERS_SERVERS}" _remote_server
+
+	# do we need to pull at all?
+	if [[ "${_remote_server}" == "NONE" ]]; then
+	    return
+	fi
     fi
 
     for _server in ${GIT_HELPERS_SERVERS}; do
