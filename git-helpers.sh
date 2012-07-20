@@ -113,29 +113,37 @@ _msg_input() {
 }
 
 # Perform sanity checks
+# return: 0 if checks are OK, > 0 otherwise
 _sanity_check() {
+    local _rc=0
 
     if [[ -z "$( whereis git | cut -d ':' -f 2 )" ]]; then
 	_msg_error "Cannot find git(1) executable in your PATH" 0
-	_msg_error "Make sure that git(1) is already installed on your system" 64 # EX_USAGE
+	_msg_error "Make sure that git(1) is already installed on your system" 0
+	_rc=64 # EX_USAGE
     fi
 
     if [[ -z "$( whereis ssh-copy-id | cut -d ':' -f 2 )" ]]; then
 	_msg_error "Cannot find ssh-copy-id(1) executable in your PATH" 0
-	_msg_error "Make sure that ssh-copy-id(1) is already installed on your system" 64 # EX_USAGE
+	_msg_error "Make sure that ssh-copy-id(1) is already installed on your system" 0
+	_rc=64 # EX_USAGE
     fi
 
     if [[ -z "${PAGER}" ]]; then
 	_msg_error "It appears you do not have a PAGER set" 0
 	_msg_error "Make sure you have a PAGER set in your profile" 0
-	_msg_error "Add a line 'export PAGER=less' in your profile file, e.g. ~/.bashrc" 64 # EX_USAGE
+	_msg_error "Add a line 'export PAGER=less' in your profile file, e.g. ~/.bashrc" 0
+	_rc=64 # EX_USAGE
     fi
 
     if [[ ! -f "${HOME}/.git-helpers.conf" ]]; then
 	_msg_error "No configuration file found" 0
 	_msg_error "Make sure to initialize the Git helpers first" 0 
-	_msg_error "To initialize the hepers execute 'git change init' command" 64 # EX_USAGE
+	_msg_error "To initialize the helpers execute the 'git change init' command" 0
+	_rc=64 # EX_USAGE
     fi
+
+    return ${_rc}
 }
 
 # Check if working tree is clean
@@ -1076,7 +1084,13 @@ exec_git_change() {
     _cmd_name="${1}"
     shift
 
-    _sanity_check
+    if ! _sanity_check ; then
+	# We want to initialize the helpers?
+	if [[ "${_cmd_name}" != "init" ]]; then
+	    _msg_error "Sanity checks did not pass verification" 0
+	    _msg_error "Make sure to fix the above errors first" 64 # EX_USAGE
+	fi
+    fi
 
     case "${_cmd_name}" in
 	verify)
