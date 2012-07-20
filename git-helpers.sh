@@ -112,6 +112,53 @@ _msg_input() {
     fi
 }
 
+# Provide a menu for choosing from mutliple options
+# $1: Prompt message
+# $2: String separated by white spaces containing the menu options
+# $3: Variable name to store the input
+_msg_menu() {
+    local _msg="${1}"
+    local _menu_items="${2}"
+    local _result="${3}"
+    local _item
+    local _counter=1
+    local _choice=0
+    
+    # append to the menu items the 'ALL' option
+    _menu_items="${_menu_items} ALL"
+
+    echo ">>> MENU  : ${_msg}"
+    echo ""
+    
+    for _item in ${_menu_items}; do
+	echo "          ${_counter}) ${_item}"
+	let _counter++
+    done
+
+    echo ""
+    
+    while [ ${_choice} -eq 0 ] ; do
+	_msg_input "Please select an option from the above menu: " _choice
+	
+	# check if a valid choice was made
+	if [[ ( ${_choice} -lt 1 ) || ( ${_choice} -ge ${_counter} ) ]]; then
+	    _choice=0
+	    _msg_error "Invalid input detected" 0
+	fi
+    done
+    
+    # save the chosen option in _result
+    _counter=1
+    for _item in ${_menu_items}; do
+	if [[ ${_counter} -eq ${_choice} ]]; then
+	    eval ${_result}="${_item}"
+	    break
+	fi
+	
+	let _counter++
+    done
+}
+
 # Perform sanity checks
 # return: 0 if checks are OK, > 0 otherwise
 _sanity_check() {
@@ -960,8 +1007,8 @@ exec_pull() {
     fi
 
     if [[ -z "${_remote_server}" ]]; then
-	_msg_info "No remote server specified, doing nothing"
-	return
+	_msg_info "No server for pulling specified"
+	_msg_menu "Available servers for pulling" "${GIT_HELPERS_SERVERS}" _remote_server
     fi
 
     for _server in ${GIT_HELPERS_SERVERS}; do
