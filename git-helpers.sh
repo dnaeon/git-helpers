@@ -146,6 +146,12 @@ _sanity_check() {
     return ${_rc}
 }
 
+# Source the Git helpers configuration file
+_source_config() { 
+
+    source "${HOME}/.git-helpers.conf"
+}
+
 # Check if working tree is clean
 # return: 0 if it is clean, 1 otherwise
 _git_working_tree_is_clean() {
@@ -926,7 +932,7 @@ usage_pull() {
     exit 64 # EX_USAGE
 }
 
-# Pull changes on the Cfengine servers
+# Pull changes on the remote servers
 # $1: Branch name
 exec_pull() {
     local _branch
@@ -1091,6 +1097,8 @@ exec_git_change() {
 	    _msg_error "Make sure to fix the above errors first" 64 # EX_USAGE
 	fi
     fi
+
+    _source_config
 
     case "${_cmd_name}" in
 	verify)
