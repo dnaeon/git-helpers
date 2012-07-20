@@ -915,66 +915,66 @@ exec_sync() {
 # return: EX_USAGE
 usage_pull() {
     
-    echo "usage: git change pull -b <branch>"
+    echo "usage: git change pull -s <server>"
     echo ""
-    echo "Performs a pull operation on the Cfengine servers"
+    echo "Performs a pull operation on the remote servers"
     echo ""
-    echo "This command will perform a 'git pull' on the Cfengine servers"
-    echo "Valid branch names to specify for the pull operation are listed below:"
+    echo "This command will perform a 'git pull' on the remote server(s)"
     echo ""
-    echo " * TEST      [cfengine-test.elex.be]"
-    echo " * UAT       [cfengine-uat.elex.be]"
-    echo " * STABLE    [cfengine.elex.be]"
-    echo " * ALL       [Pull on all Cfengine servers]"
+    echo "The special server name 'ALL' will trigger a pull on all"
+    echo "remote servers that are defined in the configuration file"
     echo ""
-    echo "Example usage: git change pull -b STABLE"
+    echo "Example usage: git change pull -s repo.example.org"
+    echo "               git change pull -s ALL"
     
     exit 64 # EX_USAGE
 }
 
 # Pull changes on the remote servers
-# $1: Branch name
+# $1: Server on which to pull
 exec_pull() {
-    local _branch
-    local _cfengine_servers
     local _server
+    local _server_found
+    local _remote_server
 
     # reset getopts
     OPTIND=1
 
     # Parse command-line options
-    while getopts 'b:' arg; do
+    while getopts 's:' arg; do
 	case "${arg}" in
-	    b) _branch="${OPTARG}" ;;
+	    s) _remote_server="${OPTARG}" ;;
             ?) usage_pull ;;
 	esac
     done
 
     shift $((OPTIND - 1))
-
-    # Pull only on the Cfengine server we apply the change
-    case "${_branch}" in
-	TEST)	_cfengine_servers="cfengine-test.elex.be" ;;
-	UAT) 	_cfengine_servers="cfengine-uat.elex.be" ;;
-	STABLE)	_cfengine_servers="cfengine.elex.be" ;;
-	ALL)	_cfengine_servers="cfengine-test.elex.be cfengine-uat.elex.be cfengine.elex.be" ;;
-	*)	_cfengine_servers="" ;;
-    esac
 	    	
     if [ $# -ne 0 ]; then
 	usage_pull
     fi
 
-    if [[ -z "${_cfengine_servers}" ]]; then
-	_msg_info "No valid branch names specified for pull"
-	_msg_info "Not doing a remote pull on the Cfengine servers"
+    if [[ -z "${GIT_HELPERS_SERVERS}" ]]; then
+	_msg_info "No remote servers for pulling exist, doing nothing"
 	return
     fi
 
-    for _server in ${_cfengine_servers}; do 
-	_msg_info "Pulling on '${_server}'"
-	ssh ${USER}@"${_server}" "cd /var/lib/cfengine2 && sudo git pull" > /dev/null 2>&1
+    for _server in ${GIT_HELPERS_SERVERS}; do
+	if [[ "${_remote_server}" == "ALL" ]]; then
+	    _msg_info "Pulling on '${_server}'"
+	    ssh ${GIT_HELPERS_USER}@"${_server}" "cd ${GIT_HELPERS_REPOPATH} && sudo git pull" > /dev/null 2>&1
+	else
+	    if [[ "${_remote_server}" == "${_server}" ]]; then
+		_server_found=1
+		_msg_info "Pulling on '${_server}'"
+		ssh ${GIT_HELPERS_USER}@"${_server}" "cd ${GIT_HELPERS_REPOPATH} && sudo git pull" > /dev/null 2>&1
+	    fi
+	fi
     done
+    
+    if [[ ${_server_found} -ne 1 ]]; then
+	_msg_info "Specified server for pulling was not found, doing nothing"
+    fi
 }
 
 # Display usage information for 'git change init'
@@ -1003,6 +1003,7 @@ exec_init() {
     local _server
     local _username
     local _ssh_key
+    local _repopath
     local _force=0
 
     # reset getopts
@@ -1047,7 +1048,7 @@ exec_init() {
 	_ssh_key="${HOME}/.ssh/id_rsa.pub"
     fi
 
-    _msg_info "Will now configure remote repositories for pulling"
+    _msg_info "Will now configure remote servers for pulling"
     _msg_info "To stop entering servers press ENTER or EOF (Ctrl+D)"
 
     while _msg_input "Server name: " _server ; do
@@ -1057,6 +1058,12 @@ exec_init() {
     if [[ -z "${_remote_servers}" ]]; then
 	_msg_info "No remote servers specified, doing nothing"
     else
+	_msg_input "Path to the Git repository on the servers [default is /var/lib/cfengine2]: " _repopath
+
+	if [[ -z "${_repopath}" ]]; then
+	    _repopath="/var/lib/cfengine2"
+	fi
+
 	_msg_info "Will now copy your public SSH keys to the remote servers"
 	_msg_info "Make sure that you have a home directory with proper permissions on the servers before proceeding"
 	_msg_input "Press ENTER when ready ..."
@@ -1071,6 +1078,7 @@ exec_init() {
 
     echo "GIT_HELPERS_USER=${_username}" > "${HOME}/.git-helpers.conf"
     echo "GIT_HELPERS_SERVERS=${_remote_servers}" >> "${HOME}/.git-helpers.conf"
+    echo "GIT_HELPERS_REPOPATH=${_repopath}" >> "${HOME}/.git-helpers.conf"
     chmod 0600 "${HOME}/.git-helpers.conf"
     
     _msg_info "Configuration file saved in ${HOME}/.git-helpers.conf"
