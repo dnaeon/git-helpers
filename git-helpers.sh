@@ -583,8 +583,8 @@ exec_apply() {
 
     _git_push_branch ${_branch}
 
-    # pull on the Cfengine servers
-    exec_pull -b "${_branch}"
+    # pull on the remote servers
+    exec_pull
 
     _git_checkout_branch ${_prev_branch}
     _msg_info "Done."
@@ -768,9 +768,9 @@ exec_revert() {
 	
 	_git_checkout_branch ${_prev_branch}
 	
-	# should we pull on the Cfengine servers?
+	# should we pull on the remote servers?
 	if [ ${_pull} -eq 1 ]; then
-	    exec_pull -b "${_branch}"
+	    exec_pull
 	fi
 
 	_msg_info "Done."
@@ -959,8 +959,14 @@ exec_pull() {
 	return
     fi
 
+    if [[ -z "${_remote_server}" ]]; then
+	_msg_info "No remote server specified, doing nothing"
+	return
+    fi
+
     for _server in ${GIT_HELPERS_SERVERS}; do
 	if [[ "${_remote_server}" == "ALL" ]]; then
+	    _server_found=1
 	    _msg_info "Pulling on '${_server}'"
 	    ssh ${GIT_HELPERS_USER}@"${_server}" "cd ${GIT_HELPERS_REPOPATH} && sudo git pull" > /dev/null 2>&1
 	else
@@ -1052,7 +1058,7 @@ exec_init() {
     _msg_info "To stop entering servers press ENTER or EOF (Ctrl+D)"
 
     while _msg_input "Server name: " _server ; do
-	_remote_servers="${_remote_servers} ${_server}"
+	_remote_servers="${_server} ${_remote_servers}"
     done
    
     if [[ -z "${_remote_servers}" ]]; then
@@ -1076,9 +1082,9 @@ exec_init() {
 
     _msg_info "Saving configuration"
 
-    echo "GIT_HELPERS_USER=${_username}" > "${HOME}/.git-helpers.conf"
-    echo "GIT_HELPERS_SERVERS=${_remote_servers}" >> "${HOME}/.git-helpers.conf"
-    echo "GIT_HELPERS_REPOPATH=${_repopath}" >> "${HOME}/.git-helpers.conf"
+    echo "GIT_HELPERS_USER=\"${_username}\"" > "${HOME}/.git-helpers.conf"
+    echo "GIT_HELPERS_SERVERS=\"${_remote_servers}\"" >> "${HOME}/.git-helpers.conf"
+    echo "GIT_HELPERS_REPOPATH=\"${_repopath}\"" >> "${HOME}/.git-helpers.conf"
     chmod 0600 "${HOME}/.git-helpers.conf"
     
     _msg_info "Configuration file saved in ${HOME}/.git-helpers.conf"
