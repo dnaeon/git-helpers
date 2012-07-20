@@ -116,18 +116,25 @@ _msg_input() {
 _sanity_check() {
 
     if [[ -z "$( whereis git | cut -d ':' -f 2 )" ]]; then
-	_msg_error "Cannot find git executable in your PATH" 0
-	_msg_error "Please check if Git is already installed" 64 # EX_USAGE
+	_msg_error "Cannot find git(1) executable in your PATH" 0
+	_msg_error "Make sure that git(1) is already installed on your system" 64 # EX_USAGE
     fi
 
     if [[ -z "$( whereis ssh-copy-id | cut -d ':' -f 2 )" ]]; then
-	_msg_error "Cannot find ssh-copy-id executable in your PATH" 0
-	_msg_error "Please check if ssh-copy-id is already installed" 64 # EX_USAGE
+	_msg_error "Cannot find ssh-copy-id(1) executable in your PATH" 0
+	_msg_error "Make sure that ssh-copy-id(1) is already installed on your system" 64 # EX_USAGE
     fi
 
     if [[ -z "${PAGER}" ]]; then
 	_msg_error "It appears you do not have a PAGER set" 0
-	_msg_error "Please set your preffered PAGER in your profile first" 64 # EX_USAGE
+	_msg_error "Make sure you have a PAGER set in your profile" 0
+	_msg_error "Add a line 'export PAGER=less' in your profile file, e.g. ~/.bashrc" 64 # EX_USAGE
+    fi
+
+    if [[ ! -f "${HOME}/.git-helpers.conf" ]]; then
+	_msg_error "No configuration file found" 0
+	_msg_error "Make sure to initialize the Git helpers first" 0 
+	_msg_error "To initialize the hepers execute 'git change init' command" 64 # EX_USAGE
     fi
 }
 
